@@ -23,16 +23,17 @@ public class SecurityConfiguration {
         // La API no mantendrá estado de sesión, cada petición será independiente.
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // Define las reglas de autorización para las peticiones HTTP.
         http.authorizeHttpRequests(authorize -> {
-            // Permite todas las peticiones POST al endpoint /topicos/registrar sin autenticación.
             authorize.requestMatchers(HttpMethod.POST, "/topicos/registrar").permitAll();
-            // Cualquier otra petición (a otros endpoints) requiere autenticación.
+            authorize.requestMatchers(HttpMethod.GET, "/topicos").permitAll();
+            authorize.requestMatchers(HttpMethod.GET, "/topicos/**").permitAll();
+            authorize.requestMatchers(HttpMethod.PUT, "/topicos/actualizar/**").permitAll();
+            authorize.requestMatchers(HttpMethod.DELETE, "/topicos/eliminar/**").permitAll();
+
             authorize.anyRequest().authenticated();
         });
 
-        // Desactiva la autenticación básica y el formulario de login.
-        // No los necesitamos en una API REST que usará tokens.
+
         http.httpBasic(httpBasic -> httpBasic.disable());
         http.formLogin(formLogin -> formLogin.disable());
 
