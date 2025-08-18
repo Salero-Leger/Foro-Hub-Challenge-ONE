@@ -1,42 +1,55 @@
 package ForoHub.alura.ForoHubAPI.infra.SpringSecurity;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
 
-    // Este es el bean que configura la cadena de filtros de seguridad
+    @Autowired
+    private SecurityFilter securityFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Desactiva la protección CSRF (Cross-Site Request Forgery).
-        // No es necesaria en APIs REST stateless (sin estado).
         http.csrf(csrf -> csrf.disable());
-
-        // Configura la gestión de sesiones para que sea stateless.
-        // La API no mantendrá estado de sesión, cada petición será independiente.
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+        // Reglas de autorización
         http.authorizeHttpRequests(authorize -> {
-            authorize.requestMatchers(HttpMethod.POST, "/topicos/registrar").permitAll();
-            authorize.requestMatchers(HttpMethod.GET, "/topicos").permitAll();
-            authorize.requestMatchers(HttpMethod.GET, "/topicos/**").permitAll();
-            authorize.requestMatchers(HttpMethod.PUT, "/topicos/actualizar/**").permitAll();
-            authorize.requestMatchers(HttpMethod.DELETE, "/topicos/eliminar/**").permitAll();
-
+            authorize.requestMatchers(HttpMethod.POST, "/login").permitAll();
+            authorize.requestMatchers(HttpMethod.POST, "/topicos/registrar").authenticated();
             authorize.anyRequest().authenticated();
         });
 
-
+        // Desactivamos la autenticación básica y el login por formulario
         http.httpBasic(httpBasic -> httpBasic.disable());
         http.formLogin(formLogin -> formLogin.disable());
 
+        // Agregamos el filtro personalizado antes del filtro de autenticación por defecto
+        http.addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
